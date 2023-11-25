@@ -1,7 +1,15 @@
 import { ButtonSubmit } from "../../shared/Components/ButtonSubmit";
 import { ButtonCancel } from "../../shared/Components/ButtonCancel";
 import "./style.css";
+import { toast } from "react-toastify";
 import { useState } from "react";
+import PacmanLoader from "react-spinners/PacmanLoader";
+
+const override = {
+    display: "block",
+    margin: "0 auto",
+    borderColor: "white",
+  };
 
 export const CreateProductPage = () => {
     const [product, setProduct] = useState({
@@ -9,6 +17,7 @@ export const CreateProductPage = () => {
         ingredients: "",
         price: 0,
     });
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (event) => {
         event.preventDefault();
@@ -17,19 +26,42 @@ export const CreateProductPage = () => {
         setProduct((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
 
-        const productAsString = window.localStorage.getItem("products") ?? "[]";
+        if(product.price < 1) {
+            toast.error('Produto não pode ser menor que zero.', {
+                theme: "colored",
+            });
 
-        const products = JSON.parse(productAsString);
+            setProduct((previous) => ({ ...previous, price: 0 }));
 
-        window.localStorage.setItem(
-            "products",
-            JSON.stringify([...products, { ...product, price: product.price * 100 }])
-        );
+            return;
+        }
 
-        return window.location.replace("/");
+        // const price = product.price * 100;
+
+        if (isLoading) return;
+
+        try {
+            setIsLoading(true);
+
+            await fetch("http://localhost:3000/products", {
+                body: JSON.stringify({ ...product, price: product.price * 100 }),
+                method: "POST",
+                headers: {
+                    "Content-type": "application/json",
+                },
+            });
+
+            toast.success("Produto cadastrado com sucesso!", { autoClose: 1000 });
+
+            setTimeout(() => {
+                return window.location.replace("/");
+            }, 2000);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     return (
@@ -70,8 +102,8 @@ export const CreateProductPage = () => {
             </span>
 
             <div className="buttons-form">
-                <ButtonSubmit name="Salvar" />
-                <ButtonCancel name="Cancelar" />
+                <ButtonSubmit name={isLoading ? ( <PacmanLoader cssOverride={override} size={15} /> ) : ( "Salvar" )} />
+                <ButtonCancel name="Cancelar" onClick={() => window.location.replace("/")} />
             </div>
         </form>
     );
